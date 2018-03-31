@@ -1,70 +1,42 @@
-import requests
-import json
 from queue import Queue
-
-class WikiTopic(object):
-    def __init__(self, topic):
-        self.topic = topic
-        self.links = self.get_titles()
-
-    def wiki_request(self):
-        payload = {
-            'action': 'query',
-            'titles': self.topic,
-            'prop': 'links',
-            'format': 'json',
-            'pllimit': '500'
-        }
-
-        r = requests.get('https://en.wikipedia.org/w/api.php?', params=payload)
-        return json.loads(r.text)
-
-    def get_titles(self):
-
-        r = self.wiki_request()
-        pages = r['query']['pages']
-        links = []
-        for page in pages:
-            if 'links' in pages[page]:
-                links.append(pages[page]['links'])
-
-        titles = []
-        for link in links:
-            for sub in link:
-                titles.append(sub['title'])
-        return titles
-
+from wiki import wiki_request
+import coros
+# import asyncio
+# import aiohttp
 
 class WikiGraph(object):
-    def __init__(self, start, end):
-        self.start = WikiTopic(start)
-        self.end = WikiTopic(end)
+    def __init__(self):
         self.graph = {}
+        self.to_visit = Queue()
 
-    def shortest_path(self):
-        if self.start.topic == self.end.topic:
+    def shortest_path(self, start, end):
+        if start == end:
             print('The start and end are the same')
             return
 
         came_from = {
-            self.start.topic: None,
+            start: None,
         }
 
-        to_visit = Queue()
-        to_visit.put(self.start.topic)
+        self.to_visit.put((start, 0))
 
-        while to_visit:
-            cur = to_visit.get()
-            self.graph[cur] = WikiTopic(cur).get_titles()
+        while self.to_visit:
+            cur, depth = self.to_visit.get()
+            if depth == 10:
+                break
+
+            if cur not in self.graph:
+                # enqueue for worker
+                self.graph[cur] = wiki_request(cur)
             sublinks = self.graph[cur]
 
             for sublink in sublinks:
                 if sublink in came_from:
                     continue
                 came_from[sublink] = cur
-                if sublink == self.end.topic:
+                if sublink == end:
                     return self.find_path(came_from, sublink)
-                to_visit.put(sublink)
+                self.to_visit.put((sublink, depth + 1))
 
         print('No path found')
 
@@ -79,6 +51,6 @@ class WikiGraph(object):
         return path
 
 
-p = WikiGraph('Python', 'Total Film')
-s = p.shortest_path()
-print(s)
+# p = WikiGraph('Python', 'Total Film')
+# s = p.shortest_path()
+# print(s)

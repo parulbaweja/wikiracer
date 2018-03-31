@@ -1,15 +1,16 @@
 import requests
 import json
+import aiohttp
 
 BASE_URL = 'https://en.wikipedia.org/w/api.php?'
 
 
-def wiki_request(topic):
+async def wiki_request(session, topic):
     cont = None
     titles = []
 
     while cont != 'DONE':
-        body = _wiki_request(topic, cont)
+        body = await _wiki_request(session, topic, cont)
         _get_titles(body, titles)
         try:
             cont = body['continue']['plcontinue']
@@ -19,18 +20,20 @@ def wiki_request(topic):
     return titles
 
 
-def _wiki_request(topic, cont):
+async def _wiki_request(session, topic, cont):
     payload = {
         'action': 'query',
         'titles': topic,
         'prop': 'links',
         'format': 'json',
         'pllimit': '500',
-        'plcontinue': cont,
     }
+    if cont:
+        payload['plcontinue'] = cont
 
-    body = requests.get(BASE_URL, params=payload)
-    return json.loads(body.text)
+    # using 'with' closes the session
+    async with session.get(BASE_URL, params=payload) as resp:
+        return await resp.json()
 
 
 def _get_titles(body, titles):
