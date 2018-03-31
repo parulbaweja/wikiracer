@@ -2,6 +2,7 @@ from queue import Queue
 from wiki import wiki_request
 import coros
 import asyncio
+import sys
 # import aiohttp
 
 class WikiGraph(object):
@@ -45,7 +46,7 @@ class WikiGraph(object):
 
         path.reverse()
         print(path)
-        return path
+        sys.exit()
 
     async def queue_links(self, cur, resp, depth):
         self.graph[cur] = resp
@@ -60,6 +61,6 @@ p = WikiGraph()
 coros = [p.fetcher.worker() for i in range(10)]
 loop = asyncio.get_event_loop()
 loop.run_until_complete(asyncio.gather(
-    p.shortest_path('Python', 'Total Film'),
+    p.shortest_path(sys.argv[1], sys.argv[2]),
     *coros
 ))
