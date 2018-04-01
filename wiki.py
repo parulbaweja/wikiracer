@@ -1,6 +1,7 @@
 import requests
 import json
 import aiohttp
+import sys
 
 BASE_URL = 'https://en.wikipedia.org/w/api.php?'
 
@@ -33,7 +34,11 @@ async def _wiki_request(session, topic, cont):
 
     # using 'with' closes the session
     async with session.get(BASE_URL, params=payload) as resp:
-        return await resp.json()
+        if resp.status // 100 == 2:
+            return await resp.json()
+        else:
+            print(resp.status)
+            sys.exit(1)
 
 
 def _get_titles(body, titles):

@@ -3,19 +3,19 @@ from wiki import wiki_request
 import coros
 import asyncio
 import sys
-# import aiohttp
 
 class WikiGraph(object):
-    def __init__(self):
+    def __init__(self, isSource=True):
         self.graph = {}
         self.to_visit = asyncio.Queue()
         self.fetcher = coros.WikiFetch()
         self.came_from = {}
+        self.isSource = isSource
 
-    async def shortest_path(self, start, end):
+    async def shortest_path(self, start, end, dest_cf):
         if start == end:
-            print('The start and end are the same')
-            return
+            print([start])
+            sys.exit(0)
 
         self.came_from[start] = None
 
@@ -24,11 +24,21 @@ class WikiGraph(object):
         while True:
             cur, depth = await self.to_visit.get()
 
-            if cur == end:
-                return self.find_path(self.came_from, cur)
+            if cur in dest_cf:
+                path1 = self.find_path(self.came_from, cur)
+                path2 = self.find_path(dest_cf, cur)
+                if self.isSource:
+                    path1.reverse()
+                    path1.pop()
+                else:
+                    path2.reverse()
+                    path2.pop()
+                path1.extend(path2)
+                print(path1)
+                sys.exit(0)
 
-            if depth == 10:
-                return
+            if depth == 20:
+                break
 
             if cur not in self.graph:
                 await self.fetcher.producer(cur, self.queue_links, depth)
@@ -37,6 +47,7 @@ class WikiGraph(object):
                 await self.queue_links(cur, self.graph[cur])
 
         print('No path found')
+        sys.exit(0)
 
     def find_path(self, parents, dest):
         path = [dest]
@@ -44,9 +55,7 @@ class WikiGraph(object):
             path.append(parents[dest])
             dest = parents[dest]
 
-        path.reverse()
-        print(path)
-        sys.exit()
+        return path
 
     async def queue_links(self, cur, resp, depth):
         self.graph[cur] = resp
@@ -56,11 +65,3 @@ class WikiGraph(object):
             self.came_from[link] = cur
             await self.to_visit.put((link, depth + 1))
 
-
-p = WikiGraph()
-coros = [p.fetcher.worker() for i in range(10)]
-loop = asyncio.get_event_loop()
-loop.run_until_complete(asyncio.gather(
-    p.shortest_path(sys.argv[1], sys.argv[2]),
-    *coros
-))
