@@ -33,7 +33,7 @@ This approach significantly improved the runtime, as the program is no longer wa
 ### MVP 3: An Asynchronous Double-Ended BFS
 In the previous two approaches, the BFS occurred from a single start point. This last approach carries out a BFS from both the start and end topics. Two BFS's run asynchronously, with the start BFS and end BFS assigning workers to make requests for 'links' (links leading out from the page) and 'links here' (links leading to this page) respectively, so the graph meets in the middle.
 
-The speed of the program is now at least 1000x faster. The resulting path is not always the shortest however.
+The speed of the program is now at least 1000x faster. The resulting path is not always the shortest however, as the pages may not be enqueued in exactly a breadth-first order (queuing up and making network calls is asynchronous so a particular order does not apply in the same way).
 
 | MVP                                 | Time    |
 | ------------------------------------|:-------:|
