@@ -17,7 +17,6 @@ class WikiFetch(object):
             while True:
                 title_to_fetch, cb, depth, is_source = await self.to_fetch.get()
                 resp = await wiki_request(session, title_to_fetch, is_source)
-                print('in worker', is_source)
                 await cb(title_to_fetch, resp, depth, is_source)
 
     async def producer(self, topic, cb, depth, is_source):

@@ -41,24 +41,27 @@ class WikiGraph(object):
         sys.exit(0)
 
     async def bfs(self, to_visit, came_from, dest_cf, is_source):
-        print(self.graph)
         cur, depth = await to_visit.get()
 
         # if current topic is found in the opposing topic's visited,
         # then path exists and must be traced back on both sides to return
         if cur in dest_cf:
+            print(is_source)
             path1 = self.find_path(came_from, cur)
             path2 = self.find_path(dest_cf, cur)
 
             if is_source:
                 path1.reverse()
                 path1.pop()
+                path1.extend(path2)
+                print(path1)
             else:
                 path2.reverse()
                 path2.pop()
+                path2.extend(path1)
+                print(path2)
 
-            path1.extend(path2)
-            print(path1)
+            # print(path1)
             sys.exit(0)
 
         # condition set to not exceed 20 depths of search

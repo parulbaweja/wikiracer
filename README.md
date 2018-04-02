@@ -40,7 +40,7 @@ The speed of the program is now at least 1000x faster. The resulting path is not
 | ------------------------------------|:-------:|
 | 1. A Synchronous BFS                | 30+ min |
 | 2. An Asynchronous BFS              | 4 min   |
-| 3. An Asynchronous Double-Ended BFS | 1.722s  |
+| 3. An Asynchronous Double-Ended BFS | 1.2 s   |
 
 ## Next Steps
 1. Create a web server to listen for requests to WikiRacer. Currently, the event loop stops once a path is found and sys.exit(0) is called on the system. With a web server, the systen should not exit altogether, but rather listen for any additional requests. So, Python asyncio library's methods on stopping and ending a loop may be required here.

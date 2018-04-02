@@ -75,7 +75,6 @@ async def _get_linkshere(session, topic, cont):
 
     # using 'with' closes the session
     async with session.get(BASE_URL, params=payload) as resp:
-        print('got END resp')
         # check to see if response is OK
         if resp.status // 100 == 2:
             return await resp.json()
@@ -98,7 +97,7 @@ def _get_titles(body, titles, cont_type):
         link_type = 'linkshere'
 
     for page in pages:
-        if 'links' in pages[page]:
+        if link_type in pages[page]:
             links.append(pages[page][link_type])
 
     for link in links:
