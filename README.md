@@ -22,18 +22,16 @@ The initial MVP included an API for a WikiTopic and a WikiGraph. A WikiGraph is 
 While this method ultimately found the shortest path, it was not optimized for speed. Each check in the BFS is sequential, rather than concurrent: the program must wait for a response from each API call before continuing to search.
 
 ### MVP 2: An Asynchronous BFS
-To improve the speed, a few options became apparent: use multiple processes, use multiple threads or use coroutines with a single-threaded approach. Python3 offers an API for asynchronous programming and coroutines, Asyncio, so the last option was selected. Asyncio provides the interface to create asynchronous queues and event loops. Subsequent tasks can be initialized without waiting for responses from previous ones.
+To improve the speed, a few options became apparent: use multiple processes, use multiple threads or use coroutines with a single-threaded approach. Processes do not share memory, so running two BFS's without reference to the other seems impractical. Threading may potentially result in collisions.
 
-In the WikiRacer problem, the BFS is checking items from a queue to see if they match our destination; if the item does not, the BFS produces work (network requests to the MediaWiki API) that need to be queued up and completed. This begs the question - where will the network requests queue up?
+Python3's asyncio library offers an API to concurrently handle asynchronous network I/O. With event loops, a program can continue without waiting for responses from network calls. Callbacks are fired when the response of a network call is known in the next iteration of the event loop. For WikiRacer, the majority of work is taking place in making network requests, so this option seemed viable.
 
-With this model, we need two asynchronous queues - one for the BFS to check (WikiGraph) and one for a group of workers to fetch from the MediaWiki API (WikiFetcher). The latter (WikiFetcher) includes producers, which put topics on the queue, and workers, which pick up topics from the queue, send network requests and issue a callback on response. The callback, delineated by the WikiGraph, inserts the response (topic and list of child topics) into the graph.
+With this model, we need two asynchronous queues - one for the BFS to check for a match (WikiGraph) and one for a group of workers to fetch from the MediaWiki API (WikiFetcher). The former provides work to the latter, which upon response, issues a callback to insert the new information the WikiGraph.
 
 This approach significantly improved the runtime, as the program is no longer waiting for one network request to complete at a time. Unfortunately, some duplicate work occurs. For example, two Wikipedia pages may have idential sub-links, both sub-links are queued up for network requests and completed. Once they return, the first response is recorded and the second simply replaces the original. While this does not impact accuracy of results, it is an unnecessary step.
 
 ### MVP 3: An Asynchronous Double-Ended BFS
-In the previous two approaches, the BFS occurred from a single start point. This last approach instantiates two graphs, one from the start to the end topic and the other from the end topic to the start topic. The WikiGraph class was abstracted further for this flexibility. In this case, three asynchronous queues run: start graph's to_visit, end graph's to_visit and a single WikiFetcher's to_fetch.
-
-Each graph is also passed it's opposing graph's came_from dictionary, which keeps track of visited/parent topics. Once a topic is visited that also exists in the opposing came_from dictionary, the program has successfully found a path, halfway on each graph.
+In the previous two approaches, the BFS occurred from a single start point. This last approach carries out a BFS from both the start and end topics. Two BFS's run asynchronously, with the start BFS and end BFS assigning workers to make requests for 'links' (links leading out from the page) and 'links here' (links leading to this page) respectively, so the graph meets in the middle.
 
 The speed of the program is now at least 1000x faster. The resulting path is not always the shortest however.
 
