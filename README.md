@@ -12,6 +12,7 @@ Wikiracer is a Python command line tool to solve the WikiRace game. Specifically
 3. `pip install -r requirements.txt`
 
 To make a query, run the program with your 'Source' and 'Destination':
+
 4. `python main.py 'Source' 'Destination'`
 
 ## Implementation
