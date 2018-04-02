@@ -40,9 +40,11 @@ class WikiGraph(object):
                 path2 = self.find_path(dest_cf, cur)
 
                 if self.is_source:
-                    _format_path(path1)
+                    path1.reverse()
+                    path1.pop()
                 else:
-                    _format_path(path2)
+                    path2.reverse()
+                    path2.pop()
 
                 path1.extend(path2)
                 print(path1)
@@ -85,11 +87,3 @@ class WikiGraph(object):
                 continue
             self.came_from[link] = cur
             await self.to_visit.put((link, depth + 1))
-
-    def _format_path(path):
-        """
-        Formats path for correct display.
-        """
-        path1.reverse()
-        path1.pop()
-
