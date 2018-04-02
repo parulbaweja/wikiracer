@@ -3,6 +3,11 @@ from wiki import wiki_request
 import asyncio
 
 class WikiFetch(object):
+    """
+    An asynchronous queue of workers listening for tasks from the WikiGraph.
+    Producers put work on the queue, while workers retrieve tasks and await
+    wiki_requests. Callbacks are fired upon response.
+    """
 
     def __init__(self):
         self.to_fetch = asyncio.Queue()

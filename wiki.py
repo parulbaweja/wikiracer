@@ -7,6 +7,12 @@ BASE_URL = 'https://en.wikipedia.org/w/api.php?'
 
 
 async def wiki_request(session, topic):
+    """
+    Sends wiki request to obtain links for a topic.
+    Due to a 500 link limit, additional requests must be sent based on the
+    'continue' response.
+    """
+
     cont = None
     titles = []
 
@@ -22,6 +28,9 @@ async def wiki_request(session, topic):
 
 
 async def _wiki_request(session, topic, cont):
+    """
+    Helper function for single wiki request.
+    """
     payload = {
         'action': 'query',
         'titles': topic,
@@ -29,11 +38,13 @@ async def _wiki_request(session, topic, cont):
         'format': 'json',
         'pllimit': '500',
     }
+
     if cont:
         payload['plcontinue'] = cont
 
     # using 'with' closes the session
     async with session.get(BASE_URL, params=payload) as resp:
+        # check to see if response is OK
         if resp.status // 100 == 2:
             return await resp.json()
         else:
@@ -42,6 +53,12 @@ async def _wiki_request(session, topic, cont):
 
 
 def _get_titles(body, titles):
+    """
+    Adds titles from response to list.
+    Responses typically have one page of links, but accounted for several in
+    case.
+    """
+
     pages = body['query']['pages']
     links = []
 
