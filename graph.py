@@ -10,12 +10,13 @@ class WikiGraph(object):
     """
     def __init__(self, is_source=True):
         self.graph = {}                         # stores links for all topics
-        self.to_visit = asyncio.Queue()         # queue for bfs
         self.fetcher = fetcher.WikiFetch()      # queue up wiki_requests
-        self.came_from = {}                     # tracks parent topic & visited
-        self.is_source = is_source              # bool for tracking src
+        self.to_visit_start = asyncio.Queue()
+        self.to_visit_end = asyncio.Queue()
+        self.came_from_start = {}
+        self.came_from_end = {}
 
-    async def shortest_path(self, start, end, dest_cf):
+    async def shortest_path(self, start, end):
         """
         A breadth-first search for a path between a start and end topic.
         """
@@ -25,45 +26,52 @@ class WikiGraph(object):
             sys.exit(0)
 
         # initialize came_from with start node to trace back
-        self.came_from[start] = None
+        self.came_from_start[start] = None
+        self.came_from_end[end] = None
 
         # push start, depth=0 onto queue
-        await self.to_visit.put((start, 0))
+        await self.to_visit_start.put((start, 0))
+        await self.to_visit_end.put((end, 0))
 
         while True:
-            cur, depth = await self.to_visit.get()
-
-            # if current topic is found in the opposing topic's visited,
-            # then path exists and must be traced back on both sides to return
-            if cur in dest_cf:
-                path1 = self.find_path(self.came_from, cur)
-                path2 = self.find_path(dest_cf, cur)
-
-                if self.is_source:
-                    path1.reverse()
-                    path1.pop()
-                else:
-                    path2.reverse()
-                    path2.pop()
-
-                path1.extend(path2)
-                print(path1)
-                sys.exit(0)
-
-            # condition set to not exceed 20 depths of search
-            if depth == 20:
-                break
-
-            if cur not in self.graph:
-                # add current topic to worker's to_fetch queue
-                await self.fetcher.producer(cur, self.queue_links, depth)
-                continue
-            else:
-                # otherwise, add cur's children to to_visit queue
-                await self.queue_links(cur, self.graph[cur])
+            await self.bfs(self.to_visit_start, self.came_from_start, self.came_from_end, is_source=True)
+            await self.bfs(self.to_visit_end, self.came_from_end, self.came_from_start, is_source=False)
 
         print('No path found')
         sys.exit(0)
+
+    async def bfs(self, to_visit, came_from, dest_cf, is_source):
+        print(self.graph)
+        cur, depth = await to_visit.get()
+
+        # if current topic is found in the opposing topic's visited,
+        # then path exists and must be traced back on both sides to return
+        if cur in dest_cf:
+            path1 = self.find_path(came_from, cur)
+            path2 = self.find_path(dest_cf, cur)
+
+            if is_source:
+                path1.reverse()
+                path1.pop()
+            else:
+                path2.reverse()
+                path2.pop()
+
+            path1.extend(path2)
+            print(path1)
+            sys.exit(0)
+
+        # condition set to not exceed 20 depths of search
+        if depth == 20:
+            print('Path not found')
+            sys.exit(0)
+
+        if cur not in self.graph:
+            # add current topic to worker's to_fetch queue
+            await self.fetcher.producer(cur, self.queue_links, depth, is_source)
+        else:
+            # otherwise, add cur's children to to_visit queue
+            await self.queue_links(cur, self.graph[cur], depth, is_source)
 
     def find_path(self, parents, dest):
         """
@@ -76,14 +84,21 @@ class WikiGraph(object):
 
         return path
 
-    async def queue_links(self, cur, resp, depth):
+    async def queue_links(self, cur, resp, depth, is_source):
         """
         Adds node's children to to_visit queue for bfs.
         Callback that is fired after worker retrieves wiki_request.
         """
+        if is_source:
+            to_visit = self.to_visit_start
+            came_from = self.came_from_start
+        else:
+            to_visit = self.to_visit_end
+            came_from = self.came_from_end
+
         self.graph[cur] = resp
         for link in resp:
-            if link in self.came_from:
+            if link in came_from:
                 continue
-            self.came_from[link] = cur
-            await self.to_visit.put((link, depth + 1))
+            came_from[link] = cur
+            await to_visit.put((link, depth + 1))
