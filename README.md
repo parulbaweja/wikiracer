@@ -3,6 +3,8 @@
 ## Summary
 Wikiracer is a Python command line tool to solve the WikiRace game. Specifically, the tool allows users to enter a source and destination topic; the tool returns a list of topics that form a path between the source and destination, based on network requests made to the WikiMedia API.
 
+Take a look at [my Medium blog post](https://medium.com/@parulbaweja8/how-i-built-wikiracer-f493993fbdd) about how I built it and what I learned.
+
 ## Prerequisites
 1. Python 3.6.5
 
